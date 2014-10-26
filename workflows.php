@@ -474,5 +474,4 @@ class Workflows {
 
 		return $temp;
 	}
-
 }

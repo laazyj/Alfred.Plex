@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>com.alfredapp.david.plex</string>
+	<string>com.alfredapp.laazyj.plex</string>
 	<key>connections</key>
 	<dict>
 		<key>0097FC6B-9A3B-4607-8056-164FC2A27B93</key>
@@ -153,7 +153,7 @@
 		</array>
 	</dict>
 	<key>createdby</key>
-	<string>David Ferguson</string>
+	<string>Jason Duffett, David Ferguson</string>
 	<key>description</key>
 	<string>Control Plex Media Server</string>
 	<key>disabled</key>
@@ -174,40 +174,9 @@
 				<key>runningsubtext</key>
 				<string>Searching ...</string>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
-
-$server = exec('defaults read com.alfredapp.plex.plist server');
-$port = exec('defaults read com.alfredapp.plex.plist port');
-$uuid = exec('defaults read com.alfredapp.plex.plist serverUUID');
-$client = exec('defaults read com.alfredapp.plex.plist client');
-
-if ( $server &amp;&amp; $port ):
-	$in = urlencode( "{query}" );
-
-	$results = $w-&gt;request("http://$server:$port/search?type=1&amp;query='.$in );
-	$xml = simplexml_load_string( $results );
-
-	foreach( $xml-&gt;Video as $vid ):
-
-		if ( $client == 'web' ):
-			$file = "web:http://$server:$port/web/index.html#!/servers/$uuid/sections/".$vid['librarySectionID']."/player/".$vid['ratingKey'];
-		else:
-			$file = 'player:'.$vid-&gt;Media-&gt;Part['key'];
-		endif;
-
-		if ( $vid['type'] == "movie" ):
-			$w-&gt;result( 'plex:'.$vid['title'], $file, $vid['title']. " (" .$vid['year']. ")" , "Rated: ".$vid['contentRating']. " // Summary: ".$vid['summary'], 'movie.png', 'yes' );
-		else:
-			$w-&gt;result( 'plex:'.$vid['title'], $file, $vid['grandparentTitle']." - ".$vid['title']. " (" .$vid['year']. ")" , "Rated: ".$vid['contentRating']. " // Summary: ".$vid['summary'], 'tv.png', 'yes', $vid['title'] );
-		endif;
-	endforeach;
-
-else:
-	$w-&gt;result(null, null, "No server configuration found", "Please set your server config and try again", 'icon.png', 'no' );
-endif;
-
-echo $w-&gt;toxml();</string>
+				<string>require("plex.php");
+$plex = new Plex();
+echo $plex-&gt;search("{query}");</string>
 				<key>subtext</key>
 				<string>Search your Plex Media Server</string>
 				<key>title</key>
@@ -230,28 +199,9 @@ echo $w-&gt;toxml();</string>
 				<key>escaping</key>
 				<integer>0</integer>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
-
-$server = exec('defaults read com.alfredapp.plex.plist server');
-$port = exec('defaults read com.alfredapp.plex.plist port');
-$client = exec('defaults read com.alfredapp.plex.plist client');
-
-if ( $server &amp;&amp; $port ):
-	$file = "{query}";
-
-	$arg = explode( ":", $file, 2 );
-
-	if ( $arg[0] == 'web' ):
-		exec('open "'.$arg[1].'"');
-	else:
-		$url = "http://$server:$port/system/players/$client/application/playFile?path=http://$server:$port".$arg[1];
-		$w-&gt;request( $url );
-	endif;
-else:
-	echo "No server configuration was found. Please set your server config and try again";
-endif;
-</string>
+				<string>require("plex.php");
+$plex = new Plex();
+echo $plex-&gt;play("{query}");</string>
 				<key>type</key>
 				<integer>1</integer>
 			</dict>
@@ -274,25 +224,9 @@ endif;
 				<key>runningsubtext</key>
 				<string>Listing Plex clients available ...</string>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
-
-$server = exec('defaults read com.alfredapp.plex.plist server');
-$port = exec('defaults read com.alfredapp.plex.plist port');
-
-if ( $server &amp;&amp; $port ):
-	$url = "http://$server:$port/clients";
-	$clients = $w-&gt;request( $url );
-	$clients = simplexml_load_string( $clients );
-	foreach( $clients-&gt;Server as $server ):
-		$w-&gt;result( $server['name'], $server['address'], $server['name'], $server['address'], 'icon.png' );
-	endforeach;
-	$w-&gt;result( 'plex:web', 'web', 'Web', 'Plex server web client', 'icon.png' );
-else:
-	$w-&gt;result(null, null, "Server not found", "No server configuration was found. Please save your server config and try again", 'icon.png', 'no' );
-endif;
-
-echo $w-&gt;toxml();</string>
+				<string>require("plex.php");
+$plex = new Plex();
+echo $plex-&gt;clients();</string>
 				<key>subtext</key>
 				<string>Set the active Plex client</string>
 				<key>title</key>
@@ -323,7 +257,7 @@ echo $w-&gt;toxml();</string>
 				<key>sticky</key>
 				<false/>
 				<key>text</key>
-				<string>Default client saved.</string>
+				<string>Plex client set to "{query}".</string>
 				<key>title</key>
 				<string>Plex</string>
 			</dict>
@@ -340,10 +274,12 @@ echo $w-&gt;toxml();</string>
 				<key>escaping</key>
 				<integer>0</integer>
 				<key>script</key>
-				<string>f="{query}"
-defaults write com.alfredapp.plex.plist client "$f"</string>
+				<string>require("plex.php");
+$client="{query}";
+exec("defaults write ".Plex::PLIST." client '$client'");
+echo $client;</string>
 				<key>type</key>
-				<integer>0</integer>
+				<integer>1</integer>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>
@@ -358,27 +294,9 @@ defaults write com.alfredapp.plex.plist client "$f"</string>
 				<key>escaping</key>
 				<integer>126</integer>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
-
-$server = exec('defaults read com.alfredapp.plex.plist server');
-$port = exec('defaults read com.alfredapp.plex.plist port');
-$client = exec('defaults read com.alfredapp.plex.plist client');
-
-if ( $server &amp;&amp; $port &amp;&amp; $client ):
-	
-	if ( $client == 'web' ):
-		echo "Pausing the web player is unsupported";
-		return;
-	endif;
-
-	$url = "http://$server:$port/system/players/$client/playback/pause";
-	$clients = $w-&gt;request( $url );
-	echo "Plex paused.";
-else:
-	echo "No server configuration was found. Please set your server config and try again";
-endif;
-</string>
+				<string>require("plex.php");
+$plex = new Plex();
+echo $plex-&gt;pause();</string>
 				<key>type</key>
 				<integer>1</integer>
 			</dict>
@@ -487,27 +405,9 @@ endif;
 				<key>escaping</key>
 				<integer>126</integer>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
-
-$server = exec('defaults read com.alfredapp.plex.plist server');
-$port = exec('defaults read com.alfredapp.plex.plist port');
-$client = exec('defaults read com.alfredapp.plex.plist client');
-
-if ( $server &amp;&amp; $port &amp;&amp; $client ):
-	
-	if ( $client == 'web' ):
-		echo "Resuming the web player is unsupported";
-		return;
-	endif;
-
-	$url = "http://$server:$port/system/players/$client/playback/play";
-	$clients = $w-&gt;request( $url );
-	echo "Resuming playback...";
-else:
-	echo "No server configuration was found. Please set your server config and try again";
-endif;
-</string>
+				<string>require("plex.php");
+$plex = new Plex();
+echo $plex-&gt;resume();</string>
 				<key>type</key>
 				<integer>1</integer>
 			</dict>
@@ -545,27 +445,9 @@ endif;
 				<key>escaping</key>
 				<integer>126</integer>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
-
-$server = exec('defaults read com.alfredapp.plex.plist server');
-$port = exec('defaults read com.alfredapp.plex.plist port');
-$client = exec('defaults read com.alfredapp.plex.plist client');
-
-if ( $server &amp;&amp; $port &amp;&amp; $client ):
-	
-	if ( $client == 'web' ):
-		echo "Stopping the web player is unsupported";
-		return;
-	endif;
-
-	$url = "http://$server:$port/system/players/$client/playback/stop";
-	$clients = $w-&gt;request( $url );
-	echo "Plex stopped.";
-else:
-	echo "No server configuration was found. Please set your server config and try again";
-endif;
-</string>
+				<string>require("plex.php");
+$plex = new Plex();
+echo $plex-&gt;stop();</string>
 				<key>type</key>
 				<integer>1</integer>
 			</dict>
@@ -653,28 +535,14 @@ endif;
 				<key>escaping</key>
 				<integer>126</integer>
 				<key>script</key>
-				<string>require('workflows.php');
-$w = new Workflows();
+				<string>require("plex.php");
 
+$plex = new Plex();
 $in = "{query}";
 $in = explode(" ", $in);
-
 $server = $in[0];
 $port = $in[1];
-
-exec("defaults write com.alfredapp.plex.plist server $server");
-exec("defaults write com.alfredapp.plex.plist port $port");
-
-$xml = $w-&gt;request("http://$server:$port/servers");
-$xml = simplexml_load_string( $xml );
-
-foreach( $xml-&gt;Server as $srv ):
-	if ( $srv['address'] == $server ):
-		exec("defaults write com.alfredapp.plex.plist serverUUID ".$srv['machineIdentifier']);
-	endif;
-endforeach;
-
-echo "Plex server configuration saved.";</string>
+echo $plex-&gt;server($server, $port);</string>
 				<key>type</key>
 				<integer>1</integer>
 			</dict>
@@ -691,11 +559,27 @@ echo "Plex server configuration saved.";</string>
 				<key>escaping</key>
 				<integer>0</integer>
 				<key>script</key>
-				<string>context=$(defaults read com.alfredapp.plex.plist context)
-context="{query}"
-defaults write com.alfredapp.plex.plist context "$context"</string>
+				<string>require("plex.php");
+
+$context = "{query}";
+echo "Using: $context\n";
+
+if ( strpos( $context, '/' ) === 0) {
+
+	// Valid contexts start with '/'
+	// Save context so next browse starts here
+  	exec("defaults write ".Plex::PLIST." context '$context'");
+	echo "Saved: $context\n";
+
+} else if ( (strpos( $context, 'web:' ) === 0) || (strpos( $context, 'player:' ) === 0)) {
+
+	// This is a file to play
+	$plex = new Plex();
+	echo $plex-&gt;play($context);
+
+}</string>
 				<key>type</key>
-				<integer>0</integer>
+				<integer>1</integer>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>
@@ -716,13 +600,20 @@ defaults write com.alfredapp.plex.plist context "$context"</string>
 				<key>runningsubtext</key>
 				<string>Grabbing results ...</string>
 				<key>script</key>
-				<string>php -f plex.browse.php -- "{query}"</string>
+				<string>require("plex.php");
+$plex = new Plex();
+$context = "{query}";
+if (!$context) {
+	$context = exec("defaults read ".Plex::PLIST." context");
+}
+echo $plex-&gt;browse($context);
+</string>
 				<key>subtext</key>
 				<string>Browse your Plex library</string>
 				<key>title</key>
 				<string>Browse Plex</string>
 				<key>type</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>withspace</key>
 				<true/>
 			</dict>
@@ -857,6 +748,6 @@ defaults write com.alfredapp.plex.plist context "$context"</string>
 		</dict>
 	</dict>
 	<key>webaddress</key>
-	<string>http://dferg.us</string>
+	<string>https://github.com/laazyj/Alfred.Plex</string>
 </dict>
 </plist>
